@@ -101,8 +101,3 @@ then our PDF goes into that subfolder.
 
 * [amrusiy](https://github.com/amrusiy?tab=repositories)
 
-
-
-
-
-רק
