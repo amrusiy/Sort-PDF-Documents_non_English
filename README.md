@@ -1,6 +1,6 @@
 # Sort-PDF-Documents_non_English
 
-Auto read Hebrew PDF and sort to the appropriate folder.
+Auto read Hebrew PDF and sort to appropriate folder.
 
 
 ## Getting Started
