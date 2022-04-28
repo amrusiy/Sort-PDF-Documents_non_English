@@ -28,8 +28,8 @@ IMAGE_PATH = r'C:\Users\amrus\Desktop\פרויקטים\כל בו לבניין א
 SUPPLY = "supply"
 CUSTORMER = "customer"
 SHIPPING_CERTIFICATE = "shipping certificate"
-INVOICE = "incvoice"
-
+RECEIPT = "receipt"
+CP_AMRUSI = '511527046'
 
 #extract data from excel and return privates_companies number and name, customer_code number and name
 def extract_from_excel():
@@ -69,10 +69,10 @@ def improve_contrast():
     im_output = enhancer.enhance(factor)
     im_output.save('page_1.png')
 
-    enhancer = ImageEnhance.Sharpness(im)
-    factor = 2
-    im_s_1 = enhancer.enhance(factor)
-    im_s_1.save('page_1.png');
+    # enhancer = ImageEnhance.Sharpness(im)
+    # factor = 2
+    # im_s_1 = enhancer.enhance(factor)
+    # im_s_1.save('page_1.png');
 def Recognizing_text_from_the_images_using_OCR(type):
     os.chdir(PATH_DEFAULT)
     text = ""
@@ -94,19 +94,19 @@ def Recognizing_text_from_the_images_using_OCR(type):
 def second_call_cp(text):
     cp = ""
     cp = find_cp(text, "מורשה")
-    if cp == "":
+    if (cp == "") or (cp == CP_AMRUSI):
         cp = find_cp(text, "ח.פ")
-        if cp == "":
+        if (cp == "") or (cp == CP_AMRUSI):
             cp = find_cp(text, "ת.פ")
-            if cp == "":
+            if (cp == "") or (cp == CP_AMRUSI):
                 cp = find_cp(text, "מספר ע.מ")
-                if cp == "":
+                if (cp == "") or (cp == CP_AMRUSI):
                     cp = find_cp(text, "ע.מ")
-                    if cp == "":
+                    if (cp == "") or (cp == CP_AMRUSI):
                         cp = find_cp(text, "מס'")
-                        if cp == "":
+                        if (cp == "") or (cp == CP_AMRUSI):
                             cp = find_cp(text, "עמ")
-                            if cp == "":
+                            if (cp == "") or (cp == CP_AMRUSI):
                                 cp = find_cp(text, "חפ")
 
     return cp
@@ -115,7 +115,7 @@ def find_cp(text,word):
     cp = ""
     find_first = text.find(word)
     if find_first != -1:
-        cprivate = text[find_first:find_first + 30]
+        cprivate = text[find_first - 13:find_first + 30]
         cprivate = cprivate.replace("-","")
         cp = re.findall(r'(\d+\d+\d+\d+\d+\d+\d+\d+)', cprivate)
         if len(cp) > 0:
@@ -126,6 +126,31 @@ def find_cp(text,word):
                 cp = cp[1:]
         else:
             cp = ""
+    if (cp == CP_AMRUSI) or (cp == ""):
+        find_second = text.find(word,text.find(word) + 1)
+        if find_first != -1:
+            cprivate = text[find_first:find_first + 30]
+            cprivate = cprivate.replace("-","")
+            cp = re.findall(r'(\d+\d+\d+\d+\d+\d+\d+\d+)', cprivate)
+            if len(cp) > 0:
+                cp = cp[0]
+                # for cp with 8 digit
+                if cp[0] == '0':
+                    print(cp[1:])
+                    cp = cp[1:]
+            else:
+                cp = ""
+    if (cp == CP_AMRUSI) or (cp == ""):
+        cp_list = re.findall(r'(\d+\d+\d+\d+\d+\d+\d+\d+\d+)', text)
+        for i in cp_list:
+            if (i != CP_AMRUSI) and (len(i) == 9) and (i[0] == '5'):
+                cp = i
+                break
+
+    if (len(cp) == 9) and (cp[0] != '5'):
+        temp = list(cp)
+        temp[0] = '5'
+        cp = "".join(temp)
 
     return cp
 def doc_name_searce_word(text,word,type):
@@ -142,33 +167,30 @@ def doc_name_searce_word(text,word,type):
         else:
             dn = ""
     return dn
-def find_type_and_doc_name(text,word,type):
+def find_type_and_doc_name(text,type):
     doc_name = ""
     dn = ""
     type_file = ""
 
-    find_first = text.find(word)
-    if find_first != -1:
-        if word == "חשבונית":
-            type_file = INVOICE
-        else:
-            type_file =  SHIPPING_CERTIFICATE
-        if type == 'heb':
-            doc_name = text[find_first :find_first + 20]
-        if type == 'heb_eng':
-            doc_name = text[find_first :find_first + 30]
-        dn = re.findall(r'(\d+\d+\d+\d+\d+)', doc_name)
-        if len(dn) > 0:
-            dn = dn[0]
-        else:
-            dn = ""
+    dn = doc_name_searce_word(text, "חשבוני", type)
+    if dn != "":
+        type_file = RECEIPT
+    else:
+        dn = doc_name_searce_word(text, "משלו", type)
+        if dn != "":
+            type_file = SHIPPING_CERTIFICATE
 
-        if dn == "":
-            dn = doc_name_searce_word(text,"תעודת משלוח",type)
-        if dn == "":
-            dn = doc_name_searce_word(text,"מספר",type)
-        if dn == "":
-            dn = doc_name_searce_word(text,"משלוח מספר",type)
+    if dn == "":
+        dn = doc_name_searce_word(text, "תעודת", type)
+        if dn != "":
+            type_file = SHIPPING_CERTIFICATE
+
+    if dn == "":
+        dn = doc_name_searce_word(text, "SH", type)
+    if dn == "":
+        dn = doc_name_searce_word(text,"מספר",type)
+    if dn == "":
+        dn = doc_name_searce_word(text,"מס",type)
 
     return type_file, dn
 def find_date_from_text(text):
@@ -201,21 +223,21 @@ def find_in_text_information_company_private(text):
      cp = second_call_cp(text)
 
      if cp != "":
-         # if its invoice or shipping certificate return type
+         # if its RECEIPT or shipping certificate return type
          # find the name of the document
-         type, dn = find_type_and_doc_name(text,"חשבונית","heb")
-         if dn == "":
-            type, dn = find_type_and_doc_name(text,"משלוח","heb")
+         type, dn = find_type_and_doc_name(text,"heb")
+         if type == "":
+             type = SHIPPING_CERTIFICATE #until the recipt start to work
 
          # find date in the the text, if there isnt extract current date
-            date = find_date_from_text(text)
+         date = find_date_from_text(text)
 
      # check the text is supply or customer and return data
-     if (cp == "") or (dn == "") or (type == ""):
+     if (cp == "") or (dn == ""):
         where = CUSTORMER
      else:
         where = SUPPLY
-        if type == INVOICE:
+        if type == RECEIPT:
             if date == "":
                 where = ""
 
@@ -233,18 +255,18 @@ def find_cc(text,word):
         if find_first != -1:
             cc_text = text[find_first:find_first + 20]
             cc = re.findall(r'(\d+\d+\d+\d+\d+)', cc_text)
-            if len(cc) > 0:
+            if (len(cc) > 0) and (len(str(cc[0])) == 5):
                 cc = cc[0]
             else:
                 cc = ""
-    else: # in case the file is invoice
+    else: # in case the file is RECEIPT
         cc = re.findall(r'(\d+\d+\d+\d+\d+)', text)
-        if len(cc) > 0:
+        if (len(cc) > 0):
             for i in cc:
                 if len(str(i)) == 5:
                     cc = i
                     break
-        if (len(cc) == "") or (len(cc[0]) != 1):
+        if (len(cc) == "") or (len(cc[0]) != 5):
             cc = ""
         else:
             for i in range(len(number)):
@@ -286,26 +308,6 @@ def find_type_nameDoc(text,word):
                 name_doc = ""
 
     return name_doc
-def second_call_cp(text):
-    cp = ""
-    cp = find_cp(text, "מורשה")
-    if cp == "":
-        cp = find_cp(text, "ח.פ")
-        if cp == "":
-            cp = find_cp(text, "ת.פ")
-            if cp == "":
-                cp = find_cp(text, "מספר ע.מ")
-                if cp == "":
-                    cp = find_cp(text, "ע.מ")
-                    if cp == "":
-                        cp = find_cp(text, "מס'")
-                        if cp == "":
-                            cp = find_cp(text, "עמ")
-                            if cp == "":
-                                cp = find_cp(text, "חפ")
-
-    return cp
-
 # find from the text customer code number, transfer document and date - return all data
 def find_in_text_imformation_cc_type_nameDoc_date(text,date):
     cc = ""
@@ -314,6 +316,7 @@ def find_in_text_imformation_cc_type_nameDoc_date(text,date):
     cc = find_cc(text,"לקוח")
     if cc == "":
         cc = find_cc(text,"מספר")
+
     if cc != "":
        name_doc = find_type_nameDoc(text,"משלוח")
        if name_doc == "":
@@ -340,7 +343,7 @@ def create_folder(name,directory_name):
 def directory_exist(name,where,type = ""):
     name = name.replace("\"","")
     if where == SUPPLY: #in case it's about supply PDF
-        if type == INVOICE:
+        if type == RECEIPT:
             directory_name = PATH_SUPPLY_INV +"\\"
             os.chdir(PATH_SUPPLY_INV)
         else: # type = SHIPPING_CERTIFICATE
@@ -468,18 +471,16 @@ def find_match_in_excel_extract_data_and_transfer_file_name_it(text ,file_name):
         cc,name_doc,date, where = find_in_text_imformation_cc_type_nameDoc_date(text,date)
 
     if where == "":
-        text = Recognizing_text_from_the_images_using_OCR('heb_eng')
+        text = Recognizing_text_from_the_images_using_OCR('heb')
         if name_doc == "":
-            type,name_doc = find_type_and_doc_name(text,"משלוח","heb_eng")
-            if name_doc == "":
-                type,name_doc = find_type_and_doc_name(text, "חשבונית", "heb_eng")
+            type,name_doc = find_type_and_doc_name(text,"heb_eng")
         if cp == "":
             cp = second_call_cp(text)
         if cc == "":
             cc = find_cc(text, "לקוח")
 
         if (name_doc != "") and (cp != "") :
-            if type == INVOICE:
+            if type == RECEIPT:
                 if date != "":
                     where = SUPPLY
             else:
@@ -487,8 +488,8 @@ def find_match_in_excel_extract_data_and_transfer_file_name_it(text ,file_name):
         if (name_doc != "") and ((cc != "") and (len(str(cc)) == 5)) and (where == ""):
             where = CUSTORMER
 
-    print(SUPPLY +": "+"cp = "+str(cp)+" name_doc = "+ str(name_doc) +" date = " + str(date))
-    print(CUSTORMER +": "+"cc = "+str(cc)+" name_doc = "+ str(name_doc) +" date = " + str(date))
+    print(SUPPLY + ": " + "type = " + type + " cp = "+str(cp) + " name_doc = "+ str(name_doc) + " date = " + str(date))
+    print(CUSTORMER + ": " +"cc = " + str(cc) + " name_doc = " + str(name_doc) +" date = " + str(date))
 
     if where == SUPPLY:
         for i in range(len(privates_companies)):
